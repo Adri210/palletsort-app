@@ -1,0 +1,56 @@
+name: APK de teste de desempenho
+
+on:
+  push:
+    paths:
+      - "apk_bundle/**"
+      - ".github/workflows/apk.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: "3.41.7"
+
+      - name: Extrair o código do app
+        run: |
+          mkdir -p src
+          cat apk_bundle/palletsort_apk.tar.gz.part* | tar -xz -C src
+
+      - name: Compilar o APK
+        working-directory: src/app
+        env:
+          ORG_GRADLE_PROJECT_palletsortTestSigning: "true"
+        run: |
+          flutter pub get
+          flutter build apk --release --dart-define=PALLETSORT_API_URL=https://palletsort.onrender.com
+
+      - name: Preparar o arquivo
+        run: cp src/app/build/app/outputs/flutter-apk/app-release.apk PalletSort_teste_desempenho.apk
+
+      - name: Publicar no Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: teste-desempenho
+          name: PalletSort - teste de desempenho da IA
+          make_latest: true
+          files: PalletSort_teste_desempenho.apk
+          body: |
+            APK de teste para medir o tempo da IA rodando no próprio celular (Android).
+            1. Baixe o arquivo PalletSort_teste_desempenho.apk abaixo e instale.
+            2. Ative o modo avião.
+            3. Na tela de login, toque em "Teste de desempenho da IA" e depois em "Iniciar teste".
